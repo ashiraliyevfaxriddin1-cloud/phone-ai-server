@@ -17,11 +17,22 @@ app.get("/", (req, res) => {
 
 app.post("/chat", async (req, res) => {
   try {
-    const message = req.body.message;
+    let message = "";
+
+    if (typeof req.body === "string") {
+      try {
+        const data = JSON.parse(req.body);
+        message = data.message;
+      } catch {
+        message = req.body;
+      }
+    } else {
+      message = req.body.message;
+    }
 
     if (!message) {
       return res.json({
-        reply: "Savol yozilmadi"
+        reply: "Savol yuborilmadi."
       });
     }
 
@@ -29,20 +40,14 @@ app.post("/chat", async (req, res) => {
       model: "gemini-2.0-flash"
     });
 
-    const prompt = `
-Sen Telefon Yordamchi AI san.
+    const result = await model.generateContent(
+      `Sen Telefon Yordamchi AI san.
+Har doim o'zbek tilida javob ber.
+Telefon muammolarini oddiy qilib tushuntir.
 
-Vazifang:
-- Telefon nosozliklarini tushuntirish.
-- O'zbek tilida javob berish.
-- Oddiy va tushunarli yozish.
-- Kerak bo'lsa bosqichma-bosqich ko'rsatma berish.
-
-Foydalanuvchi savoli:
-${message}
-`;
-
-    const result = await model.generateContent(prompt);
+Savol:
+${message}`
+    );
 
     const answer = result.response.text();
 
@@ -50,11 +55,11 @@ ${message}
       reply: answer
     });
 
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
 
     res.status(500).json({
-      reply: "AI serverda xatolik yuz berdi"
+      reply: "Server xatosi yuz berdi."
     });
   }
 });
