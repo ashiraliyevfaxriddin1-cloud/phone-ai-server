@@ -7,7 +7,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 
 app.use(cors());
+
+// JSON ham, oddiy text ham qabul qiladi
 app.use(express.json());
+app.use(express.text());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -20,17 +23,12 @@ app.post("/chat", async (req, res) => {
     let message = "";
 
     if (typeof req.body === "string") {
-      try {
-        const data = JSON.parse(req.body);
-        message = data.message;
-      } catch {
-        message = req.body;
-      }
-    } else {
+      message = req.body;
+    } else if (req.body && req.body.message) {
       message = req.body.message;
     }
 
-    if (!message) {
+    if (!message || message.trim() === "") {
       return res.json({
         reply: "Savol yuborilmadi."
       });
@@ -40,14 +38,16 @@ app.post("/chat", async (req, res) => {
       model: "gemini-2.0-flash"
     });
 
-    const result = await model.generateContent(
-      `Sen Telefon Yordamchi AI san.
-Har doim o'zbek tilida javob ber.
-Telefon muammolarini oddiy qilib tushuntir.
+    const result = await model.generateContent(`
+Sen Telefon Yordamchi AI san.
 
-Savol:
-${message}`
-    );
+Har doim faqat o'zbek tilida javob ber.
+
+Telefon nosozliklarini oddiy qilib tushuntir.
+
+Foydalanuvchi savoli:
+${message}
+`);
 
     const answer = result.response.text();
 
@@ -55,11 +55,11 @@ ${message}`
       reply: answer
     });
 
-  } catch (e) {
-    console.log(e);
+  } catch (err) {
+    console.error(err);
 
     res.status(500).json({
-      reply: "Server xatosi yuz berdi."
+      reply: "AI serverda xatolik yuz berdi."
     });
   }
 });
